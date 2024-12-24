@@ -2,7 +2,7 @@ import { connect } from 'cloudflare:sockets';
 
 // How to generate your own PERID:
 // [Windows] Press "Win + R", input cmd and run:  Powershell -NoExit -Command "[guid]::NewGuid()"
-let userID = 'fa6390c6-e0b9-4b71-9f10-20dfc0b1a2bb';
+let userID = '101a2131-840b-406a-845b-aa896bccf9dd';
 
 let prIP = '18.193.131.26';
 
@@ -597,31 +597,13 @@ async function handleUDPOutBound(webSocket, cvlmResponseHeader, log) {
 function getCVLMConfig(userID, hostName) {
 	const protocol = "cvlm";
 	const cvlmMain = 
-	`${protocol}` + 
-	`://${userID}@${hostName}:443`+
-	`?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2048#${hostName}`;
 	
 	return `
 ################################################################
 ---------------------------------------------------------------
-${cvlmMain}
----------------------------------------------------------------
-################################################################
----------------------------------------------------------------
-- type: cvlm
   name: ${hostName}
-  server: ${hostName}
   port: 443
   perid: ${userID}
-  network: ws
-  tls: true
-  udp: false
-  sni: ${hostName}
-  client-fingerprint: chrome
-  ws-opts:
-    path: "/?ed=443"
-    headers:
-      host: ${hostName}
 ---------------------------------------------------------------
 ################################################################
 `;
