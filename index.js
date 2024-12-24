@@ -1,11 +1,8 @@
 import { connect } from 'cloudflare:sockets';
 
-// How to generate your own PERID:
-// [Windows] Press "Win + R", input cmd and run:  Powershell -NoExit -Command "[guid]::NewGuid()"
 let userID = 'fa6390c6-e0b9-4b71-9f10-20dfc0b1a2bb';
 
 let prIP = '18.193.131.26';
-
 
 if (!isValidPERID(userID)) {
 	throw new Error('perid is not valid');
@@ -60,7 +57,6 @@ export default {
 async function cvlmOverWSHandler(request) {
 
 	/** @type {import("@cloudflare/workers-types").WebSocket[]} */
-	// @ts-ignore
 	const webSocketPair = new WebSocketPair();
 	const [client, webSocket] = Object.values(webSocketPair);
 
@@ -82,7 +78,6 @@ async function cvlmOverWSHandler(request) {
 	let udpStreamWrite = null;
 	let isDns = false;
 
-	// ws --> remote
 	readableWebSocketStream.pipeTo(new WritableStream({
 		async write(chunk, controller) {
 			if (isDns && udpStreamWrite) {
@@ -108,26 +103,20 @@ async function cvlmOverWSHandler(request) {
 			portWithRandomLog = `${portRemote}--${Math.random()} ${isUDP ? 'udp ' : 'tcp '
 				} `;
 			if (hasError) {
-				// controller.error(message);
-				throw new Error(message); // cf seems has bug, controller.error will not end stream
-				// webSocket.close(1000, message);
+				throw new Error(message);
 				return;
 			}
-			// if UDP but port not DNS port, close it
 			if (isUDP) {
 				if (portRemote === 53) {
 					isDns = true;
 				} else {
-					// controller.error('UDP proxy only enable for DNS which is port 53');
-					throw new Error('UDP proxy only enable for DNS which is port 53'); // cf seems has bug, controller.error will not end stream
+					throw new Error('UDP proxy only enable for DNS which is port 53');
 					return;
 				}
 			}
-			// ["version", "附加信息长度 N"]
 			const cvlmResponseHeader = new Uint8Array([cvlmVersion[0], 0]);
 			const rawClientData = chunk.slice(rawDataIndex);
 
-			// TODO: support udp here when cf runtime has udp support
 			if (isDns) {
 				const { write } = await handleUDPOutBound(webSocket, cvlmResponseHeader, log);
 				udpStreamWrite = write;
@@ -148,7 +137,6 @@ async function cvlmOverWSHandler(request) {
 
 	return new Response(null, {
 		status: 101,
-		// @ts-ignore
 		webSocket: client,
 	});
 }
@@ -175,15 +163,13 @@ async function handleTCPOutBound(remoteSocket, addressRemote, portRemote, rawCli
 		remoteSocket.value = tcpSocket;
 		log(`connected to ${address}:${port}`);
 		const writer = tcpSocket.writable.getWriter();
-		await writer.write(rawClientData); // first write, nomal is tls client hello
+		await writer.write(rawClientData);
 		writer.releaseLock();
 		return tcpSocket;
 	}
 
-	// if the cf connect tcp socket have no incoming data, we retry to redirect ip
 	async function retry() {
 		const tcpSocket = await connectAndWrite(prIP || addressRemote, portRemote)
-		// no matter retry success or not, close websocket
 		tcpSocket.closed.catch(error => {
 			console.log('retry tcpSocket closed error', error);
 		}).finally(() => {
@@ -194,8 +180,6 @@ async function handleTCPOutBound(remoteSocket, addressRemote, portRemote, rawCli
 
 	const tcpSocket = await connectAndWrite(addressRemote, portRemote);
 
-	// when remoteSocket is ready, pass to websocket
-	// remote--> ws
 	remoteSocketToWS(tcpSocket, webSocket, cvlmResponseHeader, retry, log);
 }
 
@@ -217,12 +201,7 @@ function makeReadableWebSocketStream(webSocketServer, earlyDataHeader, log) {
 				controller.enqueue(message);
 			});
 
-			// The event means that the client closed the client -> server stream.
-			// However, the server -> client stream is still open until you call close() on the server side.
-			// The WebSocket protocol says that a separate close message must be sent in each direction to fully close the socket.
 			webSocketServer.addEventListener('close', () => {
-				// client send close, need close server
-				// if stream is cancel, skip controller.close
 				safeCloseWebSocket(webSocketServer);
 				if (readableStreamCancel) {
 					return;
@@ -235,7 +214,6 @@ function makeReadableWebSocketStream(webSocketServer, earlyDataHeader, log) {
 				controller.error(err);
 			}
 			);
-			// for ws 0rtt
 			const { earlyData, error } = base64ToArrayBuffer(earlyDataHeader);
 			if (error) {
 				controller.error(error);
@@ -245,13 +223,8 @@ function makeReadableWebSocketStream(webSocketServer, earlyDataHeader, log) {
 		},
 
 		pull(controller) {
-			// if ws can stop read if stream is full, we can implement backpressure
-			// https://streams.spec.whatwg.org/#example-rs-push-backpressure
 		},
 		cancel(reason) {
-			// 1. pipe WritableStream has error, this cancel will called, so ws handle server close into here
-			// 2. if readableStream is cancel, all controller.close/enqueue need skip,
-			// 3. but from testing controller.error still work even if readableStream is cancel
 			if (readableStreamCancel) {
 				return;
 			}
@@ -295,15 +268,11 @@ function processCvlmHeader(
 	}
 
 	const optLength = new Uint8Array(cvlmBuffer.slice(17, 18))[0];
-	//skip opt for now
 
 	const command = new Uint8Array(
 		cvlmBuffer.slice(18 + optLength, 18 + optLength + 1)
 	)[0];
 
-	// 0x01 TCP
-	// 0x02 UDP
-	// 0x03 MUX
 	if (command === 1) {
 	} else if (command === 2) {
 		isUDP = true;
@@ -315,7 +284,6 @@ function processCvlmHeader(
 	}
 	const portIndex = 18 + optLength + 1;
 	const portBuffer = cvlmBuffer.slice(portIndex, portIndex + 2);
-	// port is big-Endian in raw data etc 80 == 0x005d
 	const portRemote = new DataView(portBuffer).getUint16(0);
 
 	let addressIndex = portIndex + 2;
@@ -323,9 +291,6 @@ function processCvlmHeader(
 		cvlmBuffer.slice(addressIndex, addressIndex + 1)
 	);
 
-	// 1--> ipv4  addressLength =4
-	// 2--> domain name addressLength=addressBuffer[1]
-	// 3--> ipv6  addressLength =16
 	const addressType = addressBuffer[0];
 	let addressLength = 0;
 	let addressValueIndex = addressIndex + 1;
@@ -351,13 +316,11 @@ function processCvlmHeader(
 			const dataView = new DataView(
 				cvlmBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
 			);
-			// 2001:0db8:85a3:0000:0000:8a2e:0370:7334
 			const ipv6 = [];
 			for (let i = 0; i < 8; i++) {
 				ipv6.push(dataView.getUint16(i * 2).toString(16));
 			}
 			addressValue = ipv6.join(':');
-			// seems no need add [] for ipv6
 			break;
 		default:
 			return {
@@ -393,12 +356,11 @@ function processCvlmHeader(
  * @param {*} log 
  */
 async function remoteSocketToWS(remoteSocket, webSocket, cvlmResponseHeader, retry, log) {
-	// remote--> ws
 	let remoteChunkCount = 0;
 	let chunks = [];
 	/** @type {ArrayBuffer | null} */
 	let cvlmHeader = cvlmResponseHeader;
-	let hasIncomingData = false; // check if remoteSocket has incoming data
+	let hasIncomingData = false;
 	await remoteSocket.readable
 		.pipeTo(
 			new WritableStream({
@@ -411,7 +373,6 @@ async function remoteSocketToWS(remoteSocket, webSocket, cvlmResponseHeader, ret
 				 */
 				async write(chunk, controller) {
 					hasIncomingData = true;
-					// remoteChunkCount++;
 					if (webSocket.readyState !== WS_READY_STATE_OPEN) {
 						controller.error(
 							'webSocket.readyState is not open, maybe close'
@@ -421,17 +382,11 @@ async function remoteSocketToWS(remoteSocket, webSocket, cvlmResponseHeader, ret
 						webSocket.send(await new Blob([cvlmHeader, chunk]).arrayBuffer());
 						cvlmHeader = null;
 					} else {
-						// seems no need rate limit this, CF seems fix this??..
-						// if (remoteChunkCount > 20000) {
-						// 	// cf one package is 4096 byte(4kb),  4096 * 20000 = 80M
-						// 	await delay(1);
-						// }
 						webSocket.send(chunk);
 					}
 				},
 				close() {
 					log(`remoteConnection!.readable is close with hasIncomingData is ${hasIncomingData}`);
-					// safeCloseWebSocket(webSocket); // no need server close websocket frist for some case will casue HTTP ERR_CONTENT_LENGTH_MISMATCH issue, client will send close event anyway.
 				},
 				abort(reason) {
 					console.error(`remoteConnection!.readable abort`, reason);
@@ -446,9 +401,6 @@ async function remoteSocketToWS(remoteSocket, webSocket, cvlmResponseHeader, ret
 			safeCloseWebSocket(webSocket);
 		});
 
-	// seems is cf connect socket have error,
-	// 1. Socket.closed will have error
-	// 2. Socket.readable will be close without any data coming
 	if (hasIncomingData === false && retry) {
 		log(`retry`)
 		retry();
@@ -465,7 +417,6 @@ function base64ToArrayBuffer(base64Str) {
 		return { error: null };
 	}
 	try {
-		// go use modified Base64 for URL rfc4648 which js atob not support
 		base64Str = base64Str.replace(/-/g, '+').replace(/_/g, '/');
 		const decode = atob(base64Str);
 		const arryBuffer = Uint8Array.from(decode, (c) => c.charCodeAt(0));
@@ -530,8 +481,6 @@ async function handleUDPOutBound(webSocket, cvlmResponseHeader, log) {
 
 		},
 		transform(chunk, controller) {
-			// udp message 2 byte is the the length of udp data
-			// TODO: this should have bug, beacsue maybe udp chunk can be in two websocket message
 			for (let index = 0; index < chunk.byteLength;) {
 				const lengthBuffer = chunk.slice(index, index + 2);
 				const udpPakcetLength = new DataView(lengthBuffer).getUint16(0);
@@ -546,7 +495,6 @@ async function handleUDPOutBound(webSocket, cvlmResponseHeader, log) {
 		}
 	});
 
-	// only handle dns udp for now
 	transformStream.readable.pipeTo(new WritableStream({
 		async write(chunk) {
 			const resp = await fetch('https://1.1.1.1/dns-query',
@@ -559,7 +507,6 @@ async function handleUDPOutBound(webSocket, cvlmResponseHeader, log) {
 				})
 			const dnsQueryResult = await resp.arrayBuffer();
 			const udpSize = dnsQueryResult.byteLength;
-			// console.log([...new Uint8Array(dnsQueryResult)].map((x) => x.toString(16)));
 			const udpSizeBuffer = new Uint8Array([(udpSize >> 8) & 0xff, udpSize & 0xff]);
 			if (webSocket.readyState === WS_READY_STATE_OPEN) {
 				log(`doh success and dns message length is ${udpSize}`);
@@ -595,7 +542,7 @@ async function handleUDPOutBound(webSocket, cvlmResponseHeader, log) {
  * @returns {string}
  */
 function getCVLMConfig(userID, hostName) {
-	
+
 	return `
 ################################################################
 ---------------------------------------------------------------
