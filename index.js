@@ -596,14 +596,27 @@ async function handleUDPOutBound(webSocket, cvlmResponseHeader, log) {
  */
 function getCVLMConfig(userID, hostName) {
 	const protocol = "cvlm";
-
-	return `
+	const cvlmMain = 
 ################################################################
 ---------------------------------------------------------------
+	
+	return `
+- type: cvlm
   name: ${hostName}
+  server: ${hostName}
   port: 443
   perid: ${userID}
+  network: ws
+  tls: true
+  udp: false
+  sni: ${hostName}
+  client-fingerprint: chrome
+  ws-opts:
+    path: "/?ed=2048"
+    headers:
+      host: ${hostName}
 ---------------------------------------------------------------
 ################################################################
 `;
 }
+
