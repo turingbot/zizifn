@@ -2,7 +2,7 @@ import { connect } from 'cloudflare:sockets';
 
 // How to generate your own PERID:
 // [Windows] Press "Win + R", input cmd and run:  Powershell -NoExit -Command "[guid]::NewGuid()"
-let userID = '101a2131-840b-406a-845b-aa896bccf9dd';
+let userID = 'fa6390c6-e0b9-4b71-9f10-20dfc0b1a2bb';
 
 let prIP = '18.193.131.26';
 
