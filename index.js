@@ -607,7 +607,6 @@ function getCVLMConfig(userID, hostName) {
 ${cvlmMain}
 ---------------------------------------------------------------
 ################################################################
-ClashMeta
 ---------------------------------------------------------------
 - type: cvlm
   name: ${hostName}
@@ -620,7 +619,7 @@ ClashMeta
   sni: ${hostName}
   client-fingerprint: chrome
   ws-opts:
-    path: "/?ed=2048"
+    path: "/?ed=443"
     headers:
       host: ${hostName}
 ---------------------------------------------------------------
