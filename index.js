@@ -596,8 +596,7 @@ async function handleUDPOutBound(webSocket, cvlmResponseHeader, log) {
  */
 function getCVLMConfig(userID, hostName) {
 	const protocol = "cvlm";
-	const cvlmMain = 
-	
+
 	return `
 ################################################################
 ---------------------------------------------------------------
