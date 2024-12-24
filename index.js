@@ -601,20 +601,9 @@ function getCVLMConfig(userID, hostName) {
 ---------------------------------------------------------------
 	
 	return `
-- type: cvlm
   name: ${hostName}
-  server: ${hostName}
   port: 443
   perid: ${userID}
-  network: ws
-  tls: true
-  udp: false
-  sni: ${hostName}
-  client-fingerprint: chrome
-  ws-opts:
-    path: "/?ed=2048"
-    headers:
-      host: ${hostName}
 ---------------------------------------------------------------
 ################################################################
 `;
