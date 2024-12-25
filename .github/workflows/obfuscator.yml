@@ -4,6 +4,7 @@ on:
     #push:
     #    paths:
     #        - 'index.js'
+    workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out the code
       - uses: actions/checkout@v4
-        with:
 
       - name: Use Node.js
         uses: actions/setup-node@v4
