@@ -6,16 +6,16 @@ on:
     #        - 'index.js'
     workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   obfuscate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Check out the code
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v4
